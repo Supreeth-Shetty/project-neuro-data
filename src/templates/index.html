@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="home">
+    <div class="jumbotron">
+  <h1>Welcome To Dashboard</h1>
+  <p>Here you can find all your projects, with there current status and option to show report, logs, export data and
+  delete project</p>
+</div>
+    <a href="/project"><button type="button" class="btn btn-success add-button">Add New Project</button></a>
+    <div class="row">
+    <div class="col-lg-4 col-sm-6 col-md-4">
+        <div class="card text-white bg-info mb-3" style="max-width: 25rem;">
+          <div class="card-header">Project Name</div>
+          <div class="card-body">
+            <h5 class="badge badge-warning">Feature Engineering </h5>
+            <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+         <button type="button" class="btn btn-warning">Continue</button>
+          </div>
+        </div>
+    </div>
+        <div class="col-lg-4 col-sm-6 col-md-4">
+        <div class="card text-white bg-info mb-3" style="max-width: 25rem;">
+          <div class="card-header">Project Name</div>
+          <div class="card-body">
+            <h5 class="badge badge-danger">Data Preprocessing </h5>
+            <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+         <button type="button" class="btn btn-danger">Continue</button>
+          </div>
+        </div>
+        </div>
+        <div class="col-lg-4 col-sm-6 col-md-4">
+            <div class="card text-white bg-info mb-3" style="max-width: 25rem;">
+          <div class="card-header">Project Name</div>
+          <div class="card-body">
+            <h5 class="badge badge-warning">Feature Engineering </h5>
+            <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+         <button type="button" class="btn btn-warning">Continue</button>
+          </div>
+        </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
