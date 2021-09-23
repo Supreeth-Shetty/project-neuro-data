@@ -3,6 +3,10 @@ import re
 from src.utils.mysql_connector import my_sql_connector
 from werkzeug.utils import secure_filename
 import os
+from datetime import datetime
+import pandas as pd
+from src.utils.cassandra_operations import cassandra_connect, query_generator
+
 
 mysql = my_sql_connector('38.17.53.115', '17652', 'admin', 'AsiK9wJ4', 'auto_neuron')
 template_dir = 'src/templates'
@@ -24,7 +28,7 @@ def index():
 
 
 @app.route('/project', methods=['GET', 'POST'])
-def dashboard():
+def stream():
     if 'loggedin' in session:
         if request.method == "GET":
             return render_template('new_project.html')
@@ -49,6 +53,29 @@ def dashboard():
 
             filename = secure_filename(f.filename)
             f.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
+            table_name = f"{name}_{timestamp}"
+            db = cassandra_connect.connect()
+
+            if filename.endswith('csv'):
+                columns = pd.read_csv(f"src/store/{filename}").columns.str.replace(" ", "_")
+                datatypes = str(pd.read_csv(f"src/store/{filename}").dtypes).split("\n")
+                query, object_columns = query_generator().create_table_query_csv(columns, datatypes, table_name)
+                try:
+                    db.execute(query)
+                    print(query, f'created {table_name}')
+                except Exception as e:
+                    print(e)
+                for query in query_generator().insert_into_generator_csv(f"src/store/{filename}", object_columns, columns, table_name):
+                    try:
+                        db.execute(query)
+                        print(f"Data inserted into {table_name}")
+                    except Exception as e:
+                        print(e)
+
+
+                print(query_generator().retrive_dataset(db, table_name))
+
 
             """
                 Now we have file stored in directory
@@ -116,31 +143,12 @@ def signup():
         return render_template('signup.html', msg=msg)
 
 
-@app.route('/deletePage/<id>', methods=['GET'])
-def renderDeleteProject(id):
-    return render_template('deleteProject.html', data={"id": id})
-
-
-@app.route('/deleteProject/<id>', methods=['GET'])
-def deleteProject(id):
-    print(id)
-    if id:
-        mysql.delete_record(f'DELETE FROM tblProjects WHERE Id={id}')
-        return redirect(url_for('index'))
-    else:
-        return redirect(url_for('login'))
-
 @app.route('/logout')
 def logout():
     session.pop('loggedin', None)
     session.pop('id', None)
     session.pop('username', None)
     return redirect(url_for('login'))
-
-
-@app.route('/stream')
-def stream():
-   return render_template('stream.html')
 
 
 
