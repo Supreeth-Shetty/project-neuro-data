@@ -116,6 +116,20 @@ def signup():
         return render_template('signup.html', msg=msg)
 
 
+@app.route('/deletePage/<id>', methods=['GET'])
+def renderDeleteProject(id):
+    return render_template('deleteProject.html', data={"id": id})
+
+
+@app.route('/deleteProject/<id>', methods=['GET'])
+def deleteProject(id):
+    print(id)
+    if id:
+        mysql.delete_record(f'DELETE FROM tblProjects WHERE Id={id}')
+        return redirect(url_for('index'))
+    else:
+        return redirect(url_for('login'))
+
 @app.route('/logout')
 def logout():
     session.pop('loggedin', None)
