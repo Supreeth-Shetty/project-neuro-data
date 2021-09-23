@@ -1,0 +1,1 @@
+{"X": ["sepal.length", "sepal.width", "petal.length", "petal.width"], "y": "variety", "pred_type": "Regression"}
