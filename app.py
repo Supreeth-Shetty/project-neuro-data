@@ -1,96 +1,109 @@
+import cassandra
 from flask import Flask, redirect, url_for, render_template, request, session
 import re
-from src.utils.mysql_connector import my_sql_connector
+from src.utils.mysql_helper import MySqlHelper
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
+import time
 import pandas as pd
-from src.utils.cassandra_operations import cassandra_connect, query_generator
+from src.utils.cassandra_helper import CassandraHelper
 
+"""
+Sql Connection
+"""
+mysql = MySqlHelper('38.17.53.115', '17652', 'admin', 'AsiK9wJ4', 'auto_neuron')
+cassandra=CassandraHelper()
 
-mysql = my_sql_connector('38.17.53.115', '17652', 'admin', 'AsiK9wJ4', 'auto_neuron')
 template_dir = 'src/templates'
 static_dir = 'src/static'
 
 app = Flask(__name__, static_folder=static_dir, template_folder=template_dir)
+
+"""
+Project Configs
+"""
 
 app.secret_key = 'DB128%^#*(%$ZXC345'
 app.config["UPLOAD_FOLDER"] = "src/store"
 app.config["MAX_CONTENT_PATH"] = "209715200"
 
 
+"""
+    [summary]: Route for dashboard
+    Returns:
+        [type]: [Redirect to login or dashboard]
+"""
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    if 'loggedin' in session:
-        return render_template('index.html')
-    else:
-        return redirect(url_for('login'))
+    try:
+        if 'loggedin' in session:
+            return render_template('index.html')
+        else:
+            return redirect(url_for('login'))
+    except Exception as e:
+        print(e)
 
+"""
+[summary]:Route for create new project
 
+    Returns:
+        [type]: [description]
+"""
 @app.route('/project', methods=['GET', 'POST'])
 def project():
-    if 'loggedin' in session:
-        if request.method == "GET":
-            return render_template('new_project.html')
+    try: 
+        if 'loggedin' in session:
+            if request.method == "GET":
+                return render_template('new_project.html')
+            else:
+                name = request.form['name']
+                description = request.form['description']
+                f = request.files['file']
+
+                ALLOWED_EXTENSIONS = ['csv', 'tsv', 'json', 'xml']
+                msg = ''
+                if not name.strip():
+                    msg = 'Please enter project name'
+                elif not description.strip():
+                    msg = 'Please enter project description'
+                elif f.filename.strip() == '':
+                    msg = 'Please select a file to upload'
+                elif f.filename.rsplit('.', 1)[1].lower() not in ALLOWED_EXTENSIONS:
+                    msg = 'This file format is not allowed, please select mentioned one'
+
+                if msg:
+                    return render_template('new_project.html', msg=msg)
+
+                filename = secure_filename(f.filename)
+                f.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                timestamp =round(time.time() * 1000)
+                table_name = f"{name}_{timestamp}"
+                file = f"src/store/{filename}"
+
+                if filename.endswith('csv'):
+                   status= cassandra.push_csv_to_database(file,table_name)
+                   
+                if status==1:
+                       userId = session.get('id')
+                       status = 1
+                       query=f"""INSERT INTO tblProjects (UserId, Name, Description, Status, 
+                       Cassandra_Table_Name) VALUES
+                       ("{userId}", "{name}", "{description}", "{status}", "{table_name}")"""
+                       
+                       rowcount = mysql.insert_record(query)
+                       
+                       if rowcount > 0:
+                           return redirect(url_for('index'))
+                       else:
+                           msg="Error while creating new Project"
+
+                return render_template('new_project.html',msg=msg)
         else:
-            name = request.form['name']
-            description = request.form['description']
-            f = request.files['file']
-
-            ALLOWED_EXTENSIONS = ['csv', 'tsv', 'json', 'xml']
-            msg = ''
-            if not name.strip():
-                msg = 'Please enter project name'
-            elif not description.strip():
-                msg = 'Please enter project description'
-            elif f.filename.strip() == '':
-                msg = 'Please select a file to upload'
-            elif f.filename.rsplit('.', 1)[1].lower() not in ALLOWED_EXTENSIONS:
-                msg = 'This file format is not allowed, please select mentioned one'
-
-            if msg:
-                return render_template('new_project.html', msg=msg)
-
-            filename = secure_filename(f.filename)
-            f.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            timestamp = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
-            table_name = f"{name}_{timestamp}"
-            db = cassandra_connect.connect()
-
-            if filename.endswith('csv'):
-                columns = pd.read_csv(f"src/store/{filename}").columns.str.replace(" ", "_")
-                datatypes = str(pd.read_csv(f"src/store/{filename}").dtypes).split("\n")
-                query, object_columns = query_generator().create_table_query_csv(columns, datatypes, table_name)
-                try:
-                    db.execute(query)
-                    print(query, f'created {table_name}')
-                except Exception as e:
-                    print(e)
-                for query in query_generator().insert_into_generator_csv(f"src/store/{filename}", object_columns, columns, table_name):
-                    try:
-                        db.execute(query)
-                        print(f"Data inserted into {table_name}")
-                    except Exception as e:
-                        print(e)
-
-
-                print(query_generator().retrive_dataset(db, table_name))
-
-
-            """
-                Now we have file stored in directory
-                so get this file and upload to cassandra and after uploading successfully
-                delete this file from folder
-                after creating the casandra table insert value into project table
-                as below
-                
-                Insert Into tblProjects(UserId,Name,Description,Status,Cassandra_Table_Name)
-                Value(session.get('id'),name,description,1,table_name)
-            """
-
-            return render_template('new_project.html')
-    else:
-        return redirect(url_for('login'))
+            return redirect(url_for('login'))
+    
+    except Exception as e:
+        print(e)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
