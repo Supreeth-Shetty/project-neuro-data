@@ -4,7 +4,7 @@ from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
 
 class cassandra_connect:
-    def connect():
+    def connect(self):
         try:
             cloud_config= {'secure_connect_bundle': 'secure-connect-test2.zip'}
             auth_provider = PlainTextAuthProvider('mBdqxsqabXCkOZQZjpsqKFoZ',
