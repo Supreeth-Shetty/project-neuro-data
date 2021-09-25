@@ -1,0 +1,6 @@
+column_name,type
+sepal.length,numerical
+sepal.width,categorical
+petal.length,numerical
+petal.width,categorical
+variety,categorical
