@@ -182,9 +182,6 @@ def logout():
 def stream():
    return render_template('stream.html')
 
-@app.route('/demo')
-def stream():
-   return render_template('stream.html')
 
 
 if __name__=='__main__':
