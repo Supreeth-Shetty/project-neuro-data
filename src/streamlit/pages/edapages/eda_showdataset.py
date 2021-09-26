@@ -31,11 +31,16 @@ def app():
     st.header('*Your Dataset*')
     st.markdown("Filter Your Result")
     form = st.form(key='my-form')
-    name = form.text_input('Enter no of records to show')
-    eda_type = form.radio("Select order", options=["Show Top Rows", "Show Bottom Row"], help="Select do you wanna dsiplay rows from top or bottom")
+    count = form.slider('No of records to show', min_value=1, max_value=len(df), value=5, step=5)
+    order = form.radio("Select order", options=["Show Top Rows", "Show Bottom Row"], help="Select do you wanna dsiplay rows from top or bottom")
     submit = form.form_submit_button('Show')
-
-
-    if submit:
-        st.write(f'hello {name}')
-    st.write(df)
+    
+    df_show=df
+    
+    if order=="Show Top Rows":
+        df_show=df_show.head(count)
+    else:
+        df_show=df_show.tail(count)
+        
+    
+    st.write(df_show)

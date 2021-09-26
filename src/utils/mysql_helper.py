@@ -28,7 +28,7 @@ class MySqlHelper:
         """
         [summary]: This function will return all record from table
         Args:
-            query ([type]): [description]
+            query ([type]): [Select tabel query]
 
         Returns:
             [type]: [description]
