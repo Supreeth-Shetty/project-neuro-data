@@ -21,7 +21,6 @@ charset-normalizer==2.0.6
 click==7.1.2
 colorama==0.4.3
 coverage==5.5
-DateTime==4.3
 cycler==0.10.0
 debugpy==1.4.3
 decorator==5.1.0
@@ -103,7 +102,6 @@ PyWavelets==1.1.1
 pywin32==301
 pywinpty==1.1.4
 PyYAML==5.4.1
-regex==2021.8.28
 pyzmq==22.3.0
 requests==2.26.0
 rsa==4.7.2
