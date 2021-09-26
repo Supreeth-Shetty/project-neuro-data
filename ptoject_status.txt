@@ -5,4 +5,10 @@
 3. Add Logger
 4. Cassandra limitaion like it accept only 75 columns
 5. Make Password Encrypted
-6. 
+
+
+*************** Teams *******************
+
+1. EDA
+2. Streamlit
+3. Flask

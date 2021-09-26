@@ -14,8 +14,7 @@ import pandas as pd
 
 
 def app():
-    st.markdown("Welcome to Data Feature Engineering")
-    st.markdown("My Projects")
+    st.markdown("Correaltion Page")
 
 
 

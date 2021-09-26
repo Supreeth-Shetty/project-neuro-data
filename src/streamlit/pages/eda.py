@@ -6,17 +6,23 @@ import pandas as pd
 
 # Custom imports 
 from pages.multipage import MultiPage
-from pages.edapages import about
+from pages.edapages import about,pandasprofiler,eda_script,eda_outlier,eda_5pointsummary,eda_correlation,eda_showdataset
 # import your pages here
 
 # Create an instance of the app 
-app = MultiPage()
+def app():
+    local = MultiPage("Select Option")
 
-# Title of the main page
-#####################pages################################
-app.add_page("About", about.app)
+    # Title of the main page
+    #####################pages################################
+    local.add_page("Help", about.app)
+    local.add_page("Pandas Profiler", pandasprofiler.app)
+    local.add_page("Show Dataset", eda_showdataset.app)
+    local.add_page("Correlation Report", eda_correlation.app)
+    local.add_page("Outlier Report", eda_outlier.app)
+    local.add_page("Custom Script", eda_script.app)
 
-###################End Pages#######################
+    ###################End Pages#######################
 
-# The main app
-app.run()
+    # The main app
+    local.run()
