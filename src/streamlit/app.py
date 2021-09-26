@@ -9,6 +9,7 @@ from multipage import MultiPage
 from pages import addnewProject,dashboard,eda,datapreprocessing,featureengineering
 
 
+data=[]
 @st.cache
 def load_data():
     try:
