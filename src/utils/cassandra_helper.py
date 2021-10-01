@@ -30,12 +30,9 @@ class CassandraHelper:
         """
         try:
             session = self.cluster.connect(self.keyspace)
-            
             create_table_query = f"create table {table_name}(column_count int, "
             insert_into_table_query = f"insert into {table_name}(column_count , "
-            
-            columns = ["__dt__".join(i.split()).replace(" ", "") for i in str(pd.read_csv(file).dtypes).split("\n")]
-            columns.pop()
+            columns = [col + "__dt__" + str(pd.read_csv(file)[col].dtype) for col in pd.read_csv(file).columns]
 
             for col in columns:
                 create_table_query += f"{col} text, "
@@ -43,11 +40,8 @@ class CassandraHelper:
 
             query = create_table_query.strip() + f" primary key(column_count));"
             session.execute(query)
-            print(query)
-            print("table created")
-            query = insert_into_table_query.strip(", '") + ")" + " values(" + str((len(columns) + 1) * ('?,')).strip(
-                ", ") + ");"
-            print(query)
+            print(f"{table_name} table created")
+            query = insert_into_table_query.strip(", '") + ")" + " values(" + str((len(columns) + 1) * ('?,')).strip(", ") + ");"
             prepared_query = session.prepare(query)
             count = 0
 
@@ -61,6 +55,7 @@ class CassandraHelper:
                         session.execute(prepared_query, data)
                     except Exception as e:
                         print(e)
+            print(f"{count} rows inserted to {table_name} table")
             return 1
         except Exception as e:
             print(e)
@@ -72,7 +67,7 @@ class CassandraHelper:
 
     def push_tsv_to_database(self, file, table_name):
         """
-        [summary]:This functions accepts csv file and table_name and creates table in cassandra with given table_name
+        [summary]:This functions accepts tsv file and table_name and creates table in cassandra with given table_name
         and inserts values from the file given into created table
         Args:
             file ([type]): [file name to upload]
@@ -93,8 +88,7 @@ class CassandraHelper:
             session.execute(query)
             print(query)
             print("table created")
-            query = insert_into_table_query.strip(", '") + ")" + " values(" + str((len(columns) + 1) * ('?,')).strip(
-                ", ") + ");"
+            query = insert_into_table_query.strip(", '") + ")" + " values(" + str((len(columns) + 1) * ('?,')).strip(", ") + ");"
             print(query)
             prepared_query = session.prepare(query)
             count = 0
@@ -130,12 +124,11 @@ class CassandraHelper:
         """
         try:
             session = self.cluster.connect(self.keyspace)
-            dataframe = pd.DataFrame(list(session.execute(f'select * from {table_name}'))).drop(
-                columns=['column_count'])
+            dataframe = pd.DataFrame(list(session.execute(f'select * from {table_name}'))).drop(columns=['column_count'])
             
             for col in dataframe.columns:
-                col_name = col.split("_")[0]
-                col_datatype = col.split("_")[1]
+                col_name = col.split("__dt__")[0]
+                col_datatype = col.split("__dt__")[1]
                 dataframe.rename(columns={col: col_name}, inplace=True)
                 try:
                     dataframe[col_name] = dataframe[col_name].astype(col_datatype)

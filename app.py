@@ -83,7 +83,8 @@ def project():
 
                 if filename.endswith('csv'):
                    status= cassandra.push_csv_to_database(file,table_name)
-                   
+                   print(cassandra.retrive_dataset(table_name))
+
                 if status==1:
                        userId = session.get('id')
                        status = 1

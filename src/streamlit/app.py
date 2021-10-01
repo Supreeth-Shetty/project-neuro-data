@@ -8,7 +8,7 @@ from utils.cassandra_helper import CassandraHelper
 from multipage import MultiPage
 from pages import addnewProject,dashboard,eda,datapreprocessing,featureengineering
 from utils.data_helper import load_data
-
+st.set_page_config(layout="wide")
 
 data = load_data()
 # st.write(data)    
@@ -16,6 +16,7 @@ data = load_data()
 
 # Create an instance of the app 
 app = MultiPage()
+
 
 # Title of the main page
 #####################pages################################
