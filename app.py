@@ -85,19 +85,23 @@ def project():
                    status= cassandra.push_csv_to_database(file,table_name)
                    print(cassandra.retrive_dataset(table_name))
 
+                elif filename.endswith('tsv'):
+                    status = cassandra.push_tsv_to_database(file, table_name)
+                    print(cassandra.retrive_dataset(table_name))
+
                 if status==1:
-                       userId = session.get('id')
-                       status = 1
-                       query=f"""INSERT INTO tblProjects (UserId, Name, Description, Status, 
-                       Cassandra_Table_Name) VALUES
-                       ("{userId}", "{name}", "{description}", "{status}", "{table_name}")"""
-                       
-                       rowcount = mysql.insert_record(query)
-                       
-                       if rowcount > 0:
-                           return redirect(url_for('index'))
-                       else:
-                           msg="Error while creating new Project"
+                   userId = session.get('id')
+                   status = 1
+                   query=f"""INSERT INTO tblProjects (UserId, Name, Description, Status, 
+                   Cassandra_Table_Name) VALUES
+                   ("{userId}", "{name}", "{description}", "{status}", "{table_name}")"""
+
+                   rowcount = mysql.insert_record(query)
+
+                   if rowcount > 0:
+                       return redirect(url_for('index'))
+                   else:
+                       msg="Error while creating new Project"
 
                 return render_template('new_project.html',msg=msg)
         else:

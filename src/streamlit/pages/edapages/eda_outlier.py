@@ -5,12 +5,14 @@ import streamlit as st
 # from . import excelpage,dashboard
 # from .resource import *
 # from multipage import MultiPage
+from math import floor
 import numpy as np
 import pandas as pd
 from utils.data_helper import load_data
 import plotly.express as px
 from sklearn.preprocessing import StandardScaler
 import plotly.figure_factory as ff
+
 #import excelpage
 # @st.cache
 
@@ -30,16 +32,16 @@ def app():
         integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">""",
         unsafe_allow_html=True,)
     query_params = st.experimental_get_query_params()
-    tabs = ["IQR Test", "Z-Score Test", "Visualize"]
+    tabs = ["IQR Test", "Z-Score Test"]
 
     if "tab" in query_params:
         active_tab = query_params["tab"][0]
     else:
-        active_tab = "Z-Score Test"
+        active_tab = "IQR Test"
 
     if active_tab not in tabs:
-        st.experimental_set_query_params(tab="Z-Score Test")
-        active_tab = "Z-Score Test"
+        st.experimental_set_query_params(tab="IQR Test")
+        active_tab = "IQR Test"
 
     li_items = "".join(
         f"""
@@ -66,9 +68,9 @@ def app():
                 lower_count = 0
                 q1 = np.percentile(dataframe[column].fillna(dataframe[column].mean()), 25)
                 q3 = np.percentile(dataframe[column].fillna(dataframe[column].mean()), 75)
-                IQR = q3 - q1
-                upper_limit = q3 + (IQR * 1.5)
-                lower_limit = q1 - (IQR * 1.5)
+                IQR = round(q3 - q1)
+                upper_limit = floor(q3 + (IQR * 1.5))
+                lower_limit = round(q1 - (IQR * 1.5))
 
                 for element in dataframe[column].fillna(dataframe[column].mean()):
                     if element > upper_limit:
@@ -115,19 +117,21 @@ def app():
                 my_dict["Upper outlier count"].append(upper_outlier)
                 my_dict["Lower outlier count"].append(lower_outlier)
                 my_dict["Total outliers"].append(upper_outlier + lower_outlier)
-                my_dict["Outlier percent"].append(
-                    round((upper_outlier + lower_outlier) / len(dataframe[column]) * 100, 2))
+                my_dict["Outlier percent"].append(round((upper_outlier + lower_outlier) / len(dataframe[column]) * 100, 2))
 
             except Exception as e:
                 print(e)
         return pd.DataFrame(my_dict).sort_values(by=['Total outliers'], ascending=False)
 
     def standardize(dataframe):
-        data = dataframe.select_dtypes(include=np.number)
-        scaler = StandardScaler()
-        scaler.fit(data)
-        scaled_dataframe = pd.DataFrame(scaler.fit_transform(data), columns=list(data.columns))
-        return scaled_dataframe
+        try:
+            data = dataframe.select_dtypes(include=np.number)
+            scaler = StandardScaler()
+            scaler.fit(data)
+            scaled_dataframe = pd.DataFrame(scaler.fit_transform(data), columns=list(data.columns))
+            return scaled_dataframe
+        except Exception as e:
+            print(e)
 
     if active_tab == "IQR Test":
         st.markdown("""A IQR test rule says that a data point is an outlier if it is more than 1.5 * IQR above the 
@@ -135,9 +139,50 @@ def app():
                     outliers are above Q3 + 1.5 * IQR""")
         iqr_outlier = outlier_detection_iqr(df)
         fig1 = px.bar(iqr_outlier, x='Features', y='Total outliers')
-        fig1.update_layout(width=1500)
+        fig1.update_layout(width=1200)
         st.write(fig1)
         st.write(iqr_outlier)
+
+        option = st.selectbox('How would you like to be visualize?', ('Boxplot', 'Scatter plot'))
+        features = list(df.select_dtypes(include=np.number).columns);features.insert(0, 'ALL')
+        if option == "Boxplot":
+            features_selected = st.multiselect('Select features ', features)
+            if 'ALL' not in features_selected:
+                for feature in features_selected:
+                    try:
+                        info = outlier_detection_iqr(df[[feature]])
+                        fig5 = px.box(df, y=feature)
+                        fig5.update_layout(width=1200, font_family="Courier New, monospace",font_color="RebeccaPurple",
+                                           font_size=15)
+                        st.plotly_chart(fig5)
+                        st.write(info)
+                    except Exception as e:
+                        print(e)
+
+            elif 'ALL' in features_selected:
+                for column in df.select_dtypes(include=np.number).columns:
+                    try:
+                        info = outlier_detection_iqr(df[[column]])
+                        fig6 = px.box(df, y=column)
+                        fig6.update_layout(width=1200, font_family="Courier New, monospace",font_color="RebeccaPurple",
+                                           font_size=15)
+                        st.plotly_chart(fig6)
+                        st.write(info)
+                    except Exception as e:
+                        print(e)
+
+        elif option == "Scatter plot":
+            st.write("An outlier for a scatter plot is the point or points that are farthest from the regression line.")
+            target_features = list(df.select_dtypes(include=np.number).columns)
+            target_variable = st.selectbox("Select target feature", target_features)
+            x_axis_features = st.multiselect("Select feature on x axis", target_features)
+            for feature in x_axis_features:
+                try:
+                    fig7 = px.scatter(df, x=feature, y=target_variable, trendline="ols")
+                    fig7.update_layout(width=1200)
+                    st.write(fig7)
+                except ValueError as e:
+                    print(e)
 
     elif active_tab == "Z-Score Test":
         st.markdown("""Z-scores can quantify the unusualness of an observation when your data follow the normal distribution. 
@@ -145,28 +190,59 @@ def app():
         return z-score grater or less than +3 & -3 respectively are considered as outliers""")
         zscore_outlier = z_score_outlier_detection(df)
         fig2 = px.bar(zscore_outlier, x='Features', y='Total outliers')
-        fig2.update_layout(width=1500)
+        fig2.update_layout(width=1200)
         st.write(fig2)
         st.write(zscore_outlier)
 
-    elif active_tab == "Visualize":
-        st.markdown("Visualize")
-        option = st.selectbox('How would you like to be visuaize?', ('Scatter plot', 'Histogram', 'Boxplot'))
-        print(option)
-        if option == 'Histogram':
-            features = list(df.select_dtypes(include=np.number).columns);features.insert(0, 'ALL')
-            features_selected = st.multiselect('Select features', features )
+        option = st.selectbox('How would you like to be visualize?', ('Distplot', 'Scatter plot'))
+        features = list(df.select_dtypes(include=np.number).columns);
+        features.insert(0, 'ALL')
+        if option == 'Distplot':
+            features_selected = st.multiselect('Select features ', features)
             scaled_data = standardize(df)
             if 'ALL' not in features_selected:
-                for column in features_selected:
-                    fig3 = px.histogram(scaled_data, column)
-                    fig3.update_layout(template='plotly_dark')
-                    st.write(fig3)
+                for feature in features_selected:
+                    try:
+                        info = z_score_outlier_detection(df[[feature]])
+                        fig3 = ff.create_distplot([scaled_data[feature].fillna(0)], [feature], bin_size=.1,
+                                                  show_rug=False,
+                                                  curve_type='kde')
+                        fig3.update_layout(width=1200, height=400, bargap=0.01, template='plotly_dark',
+                                           xaxis=dict(title=f'-----{feature}-----'))
+                        st.write(fig3)
+                        st.write(info)
+                    except Exception as e:
+                        print(e)
 
+            elif 'ALL' in features_selected:
+                for column in df.select_dtypes(include=np.number).columns:
+                    try:
+                        info = z_score_outlier_detection(df[[column]])
+                        fig4 = ff.create_distplot([scaled_data[column].fillna(0)], [column],
+                                                  bin_size=.1, show_rug=False, curve_type='kde')
+                        fig4.update_layout(width=1200, height=400,
+                                           bargap=0.01, template='plotly_dark', xaxis=dict(title=f'-----{column}-----'))
+                        st.write(fig4)
+                        st.write(info)
+                    except Exception as e:
+                        print(e)
 
-            else:
-                st.write("No Hi")
+        elif option == "Scatter plot":
+            st.write("An outlier for a scatter plot is the point or points that are farthest from the regression line.")
+            target_features = list(df.select_dtypes(include=np.number).columns)
+            target_variable = st.selectbox("Select target feature", target_features)
+            x_axis_features = st.multiselect("Select feature on x axis", target_features)
+            for feature in x_axis_features:
+                try:
+                    fig7 = px.scatter(df, x=feature, y=target_variable, trendline="ols")
+                    fig7.update_layout(width=1200)
+                    st.write(fig7)
+                except ValueError as e:
+                    print(e)
+
     else:
         st.error("Something has gone terribly wrong.")
 
 
+#fig3 = px.histogram(scaled_data, column)
+#fig3.update_layout(template='plotly_dark')

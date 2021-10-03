@@ -1,4 +1,5 @@
-import re
+import numpy as np
+import csv
 import pandas as pd
 from cassandra.cluster import Cluster
 from cassandra.auth import PlainTextAuthProvider
@@ -45,10 +46,10 @@ class CassandraHelper:
             prepared_query = session.prepare(query)
             count = 0
 
-            with open(file, "r",encoding='utf-8') as csvfile:
+            with open(file, "r",encoding='utf-8', errors='ignore') as csvfile:
                 next(csvfile)
                 for line in csvfile:
-                    data = (line.strip("\n").replace(",,", ",NaN,").replace('"', '').replace("'", "").split(","))
+                    data = (line.strip("\n").replace('"', '').replace("'", "").split(","))
                     count += 1;
                     data.insert(0, count)
                     try:
@@ -77,8 +78,7 @@ class CassandraHelper:
             session = self.cluster.connect(self.keyspace)
             create_table_query = f"create table {table_name}(column_count int, "
             insert_into_table_query = f"insert into {table_name}(column_count , "
-            columns = ["_".join(i.split()).replace(" ", "") for i in str(pd.read_csv(file).dtypes).split("\n")]
-            columns.pop()
+            columns = [col + "__dt__" + str(pd.read_csv(file, sep='\t')[col].dtype) for col in pd.read_csv(file, sep='\t').columns]
 
             for col in columns:
                 create_table_query += f"{col} text, "
@@ -86,32 +86,33 @@ class CassandraHelper:
 
             query = create_table_query.strip() + f" primary key(column_count));"
             session.execute(query)
-            print(query)
-            print("table created")
+            # print(query)
+            print(f"{table_name} table created")
             query = insert_into_table_query.strip(", '") + ")" + " values(" + str((len(columns) + 1) * ('?,')).strip(", ") + ");"
-            print(query)
             prepared_query = session.prepare(query)
             count = 0
 
-            with open(file, "r") as csvfile:
-                next(csvfile)
-                for line in csvfile:
-                    data = (line.strip("\n").replace(",,", ",NaN,").replace('"', '').replace("'", "").split(","))
+            with open(file, "r", encoding='utf-8', errors='ignore') as tsvfile:
+                tsvreader = csv.reader(tsvfile, delimiter="\t")
+                next(tsvreader)
+                for line in tsvreader:
+                    data = ",".join(line).replace('"', '').replace("'", "").strip("\n").split(",")
                     count += 1;
                     data.insert(0, count)
                     try:
                         session.execute(prepared_query, data)
                     except Exception as e:
                         print(e)
+            print(f"{count} rows inserted to {table_name} table")
+            return 1
         except Exception as e:
             print(e)
 
-        else:
-            if not session.is_shutdown:
+        finally:
+            if session and not session.is_shutdown:
                 session.shutdown()
                 print('Cassand session closed!')
-                
-                
+
 
     def retrive_dataset(self, table_name):
         """
@@ -134,7 +135,7 @@ class CassandraHelper:
                     dataframe[col_name] = dataframe[col_name].astype(col_datatype)
                 except Exception as e:
                     print(e)
-            return dataframe
+            return dataframe.replace(r'^\s*$', np.nan, regex=True)
 
 
         except Exception as e:
